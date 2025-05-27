@@ -1,0 +1,58 @@
+import lightning as L 
+from torchmetrics import Accuracy
+from source.loss_fn import SCELoss, FocalLoss
+import torch 
+
+
+class LitClassifier(L.LightningModule):
+    def __init__(self, encoder, classifier, alpha):
+        super().__init__()
+        self.encoder = encoder 
+        self.classifier = classifier
+
+        self.loss_fn = SCELoss(num_classes=6, alpha=0.7, beta=0.3)
+        self.focal_loss = FocalLoss(alpha)
+        self.acc_fn = Accuracy('multiclass', num_classes=6)
+        self.undersample = torch.argmin(alpha).int().item()
+        self.h = []
+        self.loss_epoch = []
+        self.acc_epoch = []
+    
+    def configure_optimizers(self):
+        return torch.optim.AdamW(self.parameters(), lr=1e-4)
+    
+    def forward(self, data):
+        z = self.encoder(data)
+        y = self.classifier(z)
+        return y 
+    
+    def training_step(self, batch):
+        # batch = self.undersample_class2(batch)
+        y = batch.y 
+        
+        pred = self.forward(batch)
+
+        loss = 0.4 * self.focal_loss(pred, y) + 0.6 * self.loss_fn(pred, y)
+        acc = self.acc_fn(pred, y)
+        if self.current_epoch % 10 == 0:
+            self.log_dict({
+                'loss': loss,
+                'accuracy': acc 
+            }, prog_bar=True, on_epoch=True, on_step=False)
+
+        self.loss_epoch.append(loss.detach().cpu().item())
+        self.acc_epoch.append(acc.cpu().item())
+
+        return loss 
+    
+    def on_train_epoch_end(self):
+        loss = sum(self.loss_epoch) / len(self.loss_epoch)
+        acc = sum(self.acc_epoch) / len(self.acc_epoch)
+
+        self.h.append({
+            'loss': loss, 
+            'accuracy': acc
+        })
+
+        self.loss_epoch = []
+        self.acc_epoch = []
