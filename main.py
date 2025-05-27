@@ -73,12 +73,22 @@ def main(train_path=None, test_path=None, epochs=None):
         csv_path = f"logs/metric_{split}.csv"
         df.to_csv(csv_path, index=False)
 
-        plt.figure()
-        plt.plot(epochs, losses, label="Loss")
-        plt.plot(epochs, accuracies, label="Accuracy")
+        plt.figure(figsize=(10, 5))
+        plt.subplot(1, 2, 1)
+        plt.plot(epochs, losses, label="Loss", color="tab:red")
         plt.xlabel("Epoch")
-        plt.legend()
-        plt.title("Loss and Accuracy")
+        plt.ylabel("Loss")
+        plt.title("Loss")
+        plt.grid(True)
+
+        plt.subplot(1, 2, 2)
+        plt.plot(epochs, accuracies, label="Accuracy", color="tab:blue")
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy")
+        plt.title("Accuracy")
+        plt.grid(True)
+
+        plt.tight_layout()
         plt.savefig(f"logs/metric_{split}.png")
         plt.close()
 
