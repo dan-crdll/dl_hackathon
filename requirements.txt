@@ -22,12 +22,14 @@ multidict==6.4.4
 networkx==3.4.2
 numpy==2.2.6
 packaging==24.2
+pandas==2.2.3
 pillow==11.2.1
 propcache==0.3.1
 psutil==7.0.0
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 pytorch-lightning==2.5.1.post0
+pytz==2025.2
 PyYAML==6.0.2
 requests==2.32.3
 setuptools==80.9.0
@@ -38,5 +40,6 @@ torch-geometric==2.6.1
 torchmetrics==1.7.1
 tqdm==4.67.1
 typing_extensions==4.13.2
+tzdata==2025.2
 urllib3==2.4.0
 yarl==1.20.0
