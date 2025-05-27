@@ -33,7 +33,7 @@ class LitClassifier(L.LightningModule):
         return y 
     
     def on_train_epoch_end(self):
-        if (self.current_epoch + 1) % 5 == 0:
+        if (self.current_epoch + 1) % 10 == 0:
             torch.save(self.state_dict(), f"./checkpoints/model_{self.split}_epoch_{self.current_epoch}.pth")
             print("Checkpoint Saved")
         if (self.current_epoch + 1) % 10 == 0:
