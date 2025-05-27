@@ -55,6 +55,7 @@ def main(train_path, test_path=None):
     trainer.fit(model, train_dataloaders=train_dl)
 
     # TODO: Save model history logs and loss/accuracy plot in logs folder
+    # TODO: Test part with dataset loading and result printing in submission
 
         
 if __name__=="__main__":
