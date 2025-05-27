@@ -24,14 +24,15 @@ def seed_everything(seed=42):
     torch.backends.cudnn.benchmark = False
 
 
-def main(train_path=None, test_path=None):
+def main(train_path=None, test_path=None, epochs=None):
     seed_everything()
 
     num_layers = 2
     hidden_dim = 128
     dropout = 0.1
     batch_size = 8
-    epochs = 30
+    if epochs is None:
+        epochs = 30
 
     n = torch.zeros(6)
 
@@ -50,9 +51,9 @@ def main(train_path=None, test_path=None):
         alpha = n / n.sum()
         alpha = 1.0 - alpha
         model.focal_loss = FocalLoss(alpha)
-        train_dl = DataLoader(train_ds, shuffle=False, batch_size=batch_size, num_workers=7, persistent_workers=True)
+        train_dl = DataLoader(train_ds, shuffle=False, batch_size=batch_size)
 
-        split = train_path.split("/")[-1]
+        split = train_path.split("/")[-2]
         model.split = split
 
 
@@ -81,14 +82,33 @@ def main(train_path=None, test_path=None):
         plt.savefig(f"logs/metric_{split}.png")
         plt.close()
 
-        del dataset 
+        del train_ds 
     
     if test_path is not None:
         test_ds = GraphDataset(test_path)
         test_dl = DataLoader(test_ds, shuffle=False, batch_size=1)
 
-        split = test_path.split("/")[-1]
+        split = test_path.split("/")[-2]
         model.split = split 
+        if train_path is None:
+            checkpoints = os.listdir('./checkpoints')
+
+            max_epoch = -1
+            best_ckpt = None
+            for f in checkpoints:
+                parts = f.split("_")
+                if len(parts) < 3 or parts[-3] != split:
+                    continue
+                try:
+                    epoch_num = int(parts[-1].split(".")[0])
+                except Exception:
+                    continue
+                if epoch_num > max_epoch:
+                    max_epoch = epoch_num
+                    best_ckpt = f
+            if best_ckpt is not None:
+                print(f"Loading checkpoints {best_ckpt}")
+                model.load_state_dict(torch.load(f'./checkpoints/{best_ckpt}'))
         model.eval()
         results = []
         with torch.no_grad():
@@ -110,6 +130,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--test-path', type=str, required=False, help='Path to the test data')
     parser.add_argument('--train-path', type=str, required=False, help='Path to the train data')
+    parser.add_argument('--epochs', type=str, required=False, help='Training epochs')
     args = parser.parse_args()
 
-    main(args.train_path, args.test_path)
+    main(args.train_path, args.test_path, args.epochs)
