@@ -5,7 +5,7 @@ import torch
 
 
 class LitClassifier(L.LightningModule):
-    def __init__(self, encoder, classifier, alpha):
+    def __init__(self, encoder, classifier, alpha, split):
         super().__init__()
         self.encoder = encoder 
         self.classifier = classifier
@@ -17,6 +17,12 @@ class LitClassifier(L.LightningModule):
         self.h = []
         self.loss_epoch = []
         self.acc_epoch = []
+        self.split = split
+
+        self.loss = []
+        self.acc = []
+
+        self.h = []
     
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=1e-4)
@@ -25,6 +31,18 @@ class LitClassifier(L.LightningModule):
         z = self.encoder(data)
         y = self.classifier(z)
         return y 
+    
+    def on_train_epoch_end(self):
+        if self.current_epoch % 10 == 0:
+            torch.save(self.state_dict(), f"./checkpoints/model_{self.split}_epoch_{self.current_epoch}.pth")
+
+            loss = sum(self.loss) / len(self.loss)
+            acc = sum(self.acc) / len(self.acc)
+            self.h.append({
+                'loss': loss,
+                'accuracy': acc
+            })
+
     
     def training_step(self, batch):
         # batch = self.undersample_class2(batch)
@@ -42,6 +60,9 @@ class LitClassifier(L.LightningModule):
 
         self.loss_epoch.append(loss.detach().cpu().item())
         self.acc_epoch.append(acc.cpu().item())
+
+        self.loss.append(loss.detach().cpu().item())
+        self.acc.append(acc.cpu().item())
 
         return loss 
     
