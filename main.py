@@ -5,6 +5,7 @@ import argparse
 from source.layers import Classifier, Encoder
 from source.model import LitClassifier
 from source.load_data import GraphDataset
+from source.loss_fn import FocalLoss
 from torch_geometric.data import DataLoader
 from tqdm.auto import tqdm
 import lightning as L
@@ -27,17 +28,17 @@ def main(train_path=None, test_path=None):
     seed_everything()
 
     num_layers = 2
-    hidden_dim = 1024
-    embed_dim = 256
+    hidden_dim = 128
     dropout = 0.1
     batch_size = 8
-    epochs = 50
+    epochs = 30
 
     n = torch.zeros(6)
 
     encoder = Encoder(7, hidden_dim, num_layers)
-    classifier = Classifier(embed_dim, hidden_dim, 6, dropout)
-    model = LitClassifier(encoder, classifier, alpha, split=split)
+    classifier = Classifier(hidden_dim, hidden_dim, 6, dropout)
+    alpha = torch.ones(6)
+    model = LitClassifier(encoder, classifier, alpha, split=None)
 
     if train_path is not None:
         train_ds = GraphDataset(train_path)
@@ -48,9 +49,11 @@ def main(train_path=None, test_path=None):
         del dataloader 
         alpha = n / n.sum()
         alpha = 1.0 - alpha
-        train_dl = DataLoader(train_ds, shuffle=False, batch_size=batch_size)
+        model.focal_loss = FocalLoss(alpha)
+        train_dl = DataLoader(train_ds, shuffle=False, batch_size=batch_size, num_workers=7, persistent_workers=True)
 
         split = train_path.split("/")[-1]
+        model.split = split
 
 
         trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1)
@@ -85,7 +88,7 @@ def main(train_path=None, test_path=None):
         test_dl = DataLoader(test_ds, shuffle=False, batch_size=1)
 
         split = test_path.split("/")[-1]
-
+        model.split = split 
         model.eval()
         results = []
         with torch.no_grad():

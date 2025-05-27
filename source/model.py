@@ -33,9 +33,9 @@ class LitClassifier(L.LightningModule):
         return y 
     
     def on_train_epoch_end(self):
-        if self.current_epoch % 10 == 0:
+        if self.current_epoch % 5 == 0:
             torch.save(self.state_dict(), f"./checkpoints/model_{self.split}_epoch_{self.current_epoch}.pth")
-
+        if self.current_epoch % 10 == 0:
             loss = sum(self.loss) / len(self.loss)
             acc = sum(self.acc) / len(self.acc)
             self.h.append({
@@ -56,7 +56,7 @@ class LitClassifier(L.LightningModule):
             self.log_dict({
                 'loss': loss,
                 'accuracy': acc 
-            }, prog_bar=True, on_epoch=True, on_step=False)
+            }, prog_bar=True, on_epoch=True, on_step=False, batch_size=pred.shape[0])
 
         self.loss_epoch.append(loss.detach().cpu().item())
         self.acc_epoch.append(acc.cpu().item())
