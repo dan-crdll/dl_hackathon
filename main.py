@@ -33,6 +33,7 @@ def main(train_path=None, test_path=None, epochs=None):
     batch_size = 8
     if epochs is None:
         epochs = 30
+    else: epochs = int(epochs)
 
     n = torch.zeros(6)
 
