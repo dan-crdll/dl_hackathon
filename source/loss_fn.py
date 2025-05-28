@@ -1,6 +1,7 @@
 import torch 
 from torch import nn 
 import torch.nn.functional as F 
+from torchmetrics import Accuracy
 
 class SCELoss(nn.Module):
     def __init__(self, alpha=1.0, beta=1.0, num_classes=10):
@@ -39,3 +40,32 @@ class FocalLoss(nn.Module):
         loss = -at * (1 - pt) ** self.gamma * logpt 
 
         return loss.mean()
+    
+class GCODLoss(nn.Module):
+    def __init__(self, batch_size):
+        super().__init__()
+
+        self.u = nn.Parameter(torch.zeros(batch_size), requires_grad=True)
+        self.acc = Accuracy('multiclass', num_classes=6)
+
+        self.epsilon = 0.01
+
+    def forward(self, pred, target):
+        target_one_hot =  F.one_hot(target, 6).to(target.device).squeeze().float()
+        soft_target = (1 - self.epsilon) * target_one_hot + self.epsilon / 6
+        acc = self.acc(pred, target.squeeze())
+        pred_label = torch.argmax(pred, -1).to(pred.device)
+        pred_one_hot = F.one_hot(pred_label, 6).to(pred.device).squeeze().float()
+
+        U = torch.diag(self.u)
+
+        l1 = F.cross_entropy(pred + acc * U.detach() @ target_one_hot, soft_target)
+        l2 = 1/6 * torch.norm(pred_one_hot.detach() + U @ target_one_hot - target_one_hot) ** 2
+
+        L = torch.log(F.sigmoid(torch.diagonal(pred @ target_one_hot.T)))
+        L = F.softmax(L, -1)
+        Q = F.softmax(-torch.log(self.u.detach() + 1e-8), -1)
+        D = (L * torch.log(L / Q)).sum(-1)
+        l3 = (1 - acc) * D 
+
+        return l1 + l3 + l2

@@ -5,7 +5,7 @@ import argparse
 from source.layers import Classifier, Encoder
 from source.model import LitClassifier
 from source.load_data import GraphDataset
-from source.loss_fn import FocalLoss
+from source.loss_fn import FocalLoss, GCODLoss
 from torch_geometric.data import DataLoader
 from tqdm.auto import tqdm
 import lightning as L

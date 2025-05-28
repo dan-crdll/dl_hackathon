@@ -1,6 +1,6 @@
 import lightning as L 
 from torchmetrics import Accuracy
-from source.loss_fn import SCELoss, FocalLoss
+from source.loss_fn import SCELoss, FocalLoss, GCODLoss
 import torch 
 
 
@@ -10,7 +10,7 @@ class LitClassifier(L.LightningModule):
         self.encoder = encoder 
         self.classifier = classifier
 
-        self.loss_fn = SCELoss(num_classes=6, alpha=0.7, beta=0.3)
+        self.loss_fn = GCODLoss(8)
         self.focal_loss = FocalLoss(alpha)
         self.acc_fn = Accuracy('multiclass', num_classes=6)
         self.undersample = torch.argmin(alpha).int().item()
