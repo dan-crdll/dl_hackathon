@@ -14,6 +14,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from source.utils import collate_fn_with_augmentation
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 
 def seed_everything(seed=42):
@@ -57,15 +58,25 @@ def main(train_path=None, test_path=None, epochs=None):
         # model.focal_loss = FocalLoss(alpha)
         train_dl = DataLoader(
             train_ds,
-            batch_size=16,
+            batch_size=8,
             shuffle=True,
             #collate_fn=lambda x: collate_fn_with_augmentation(x, drop_edge_prob=0.2, edge_noise_std=0.05)
         )
+        global split
         split = train_path.split("/")[-2]
         model.split = split
 
+        checkpoint_callback = ModelCheckpoint(
+            dirpath="./checkpoints",
+            filename="model_split_" + split + "_epoch_{epoch}",
+            save_top_k=5,
+            monitor="accuracy",
+            mode="max",
+            save_weights_only=True
+        )
 
-        trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1)
+
+        trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1, callbacks=[checkpoint_callback])
         trainer.fit(model, train_dataloaders=train_dl)
 
         history = model.h

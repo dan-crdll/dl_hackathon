@@ -10,7 +10,7 @@ class LitClassifier(L.LightningModule):
         self.encoder = encoder 
         # self.classifier = classifier
 
-        self.loss_fn = GCODLoss(16)
+        self.loss_fn = GCODLoss(8)
         # self.focal_loss = FocalLoss(alpha)
         self.acc_fn = Accuracy('multiclass', num_classes=6)
         self.undersample = torch.argmin(alpha).int().item()
@@ -35,9 +35,6 @@ class LitClassifier(L.LightningModule):
     
     def on_train_epoch_end(self):
         if (self.current_epoch + 1) % 4 == 0:
-            torch.save(self.state_dict(), f"./checkpoints/model_{self.split}_epoch_{self.current_epoch}.pth")
-            print("Checkpoint Saved")
-        if (self.current_epoch + 1) % 4 == 0:
             loss = sum(self.loss) / len(self.loss)
             acc = sum(self.acc) / len(self.acc)
             self.h.append({
@@ -54,11 +51,11 @@ class LitClassifier(L.LightningModule):
 
         loss = self.loss_fn(pred, y)
         acc = self.acc_fn(pred, y)
-        if (self.current_epoch + 1) % 4 == 0:
-            self.log_dict({
-                'loss': loss,
-                'accuracy': acc 
-            }, prog_bar=True, on_epoch=True, on_step=False, batch_size=pred.shape[0])
+
+        self.log_dict({
+            'loss': loss,
+            'accuracy': acc 
+        }, prog_bar=True, on_epoch=True, on_step=False, batch_size=pred.shape[0])
 
         self.loss_epoch.append(loss.detach().cpu().item())
         self.acc_epoch.append(acc.cpu().item())
