@@ -35,7 +35,7 @@ class LitClassifier(L.LightningModule):
     
     def on_train_epoch_end(self):
         if (self.current_epoch + 1) % 2 == 0:
-            torch.save(self.state_dict(), f"./checkpoints/model_{self.split}_epoch_{self.current_epoch}.pth")
+            torch.save(self.state_dict(), f"/kaggle/working/checkpoints/model_{self.split}_epoch_{self.current_epoch}.pth")
             print("Checkpoint Saved")
         if (self.current_epoch + 1) % 2 == 0:
             loss = sum(self.loss) / len(self.loss)
