@@ -41,7 +41,7 @@ def main(train_path=None, test_path=None, epochs=None):
 
     # encoder = Encoder(7, hidden_dim, num_layers)
     # classifier = Classifier(hidden_dim, hidden_dim, 6, dropout)
-    encoder = GNN(6)
+    encoder = GNN(6, 2)
     alpha = torch.ones(6)
     model = LitClassifier(encoder, alpha, split=None)
 
@@ -97,7 +97,7 @@ def main(train_path=None, test_path=None, epochs=None):
         plt.grid(True)
 
         plt.tight_layout()
-        plt.savefig(f"/kaggle/working/logs/metric_{split}.png")
+        plt.savefig(f"logs/metric_{split}.png")
         plt.close()
 
         del train_ds 
@@ -109,7 +109,7 @@ def main(train_path=None, test_path=None, epochs=None):
         split = test_path.split("/")[-2]
         model.split = split 
         if train_path is None:
-            checkpoints = os.listdir('/kaggle/working/checkpoints')
+            checkpoints = os.listdir('./checkpoints')
 
             max_epoch = -1
             best_ckpt = None
@@ -126,7 +126,7 @@ def main(train_path=None, test_path=None, epochs=None):
                     best_ckpt = f
             if best_ckpt is not None:
                 print(f"Loading checkpoints {best_ckpt}")
-                model.load_state_dict(torch.load(f'/kaggle/working/checkpoints/{best_ckpt}'))
+                model.load_state_dict(torch.load(f'./checkpoints/{best_ckpt}'))
         model.eval()
         results = []
         with torch.no_grad():
@@ -139,7 +139,7 @@ def main(train_path=None, test_path=None, epochs=None):
             "id": list(range(len(results))),
             "pred": results
         })
-        submission_path = f"/kaggle/working/submission/testset_{split}.csv"
+        submission_path = f"submission/testset_{split}.csv"
         submission_df.to_csv(submission_path, index=False)
 
 
