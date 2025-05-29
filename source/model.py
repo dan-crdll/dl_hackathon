@@ -10,7 +10,7 @@ class LitClassifier(L.LightningModule):
         self.encoder = encoder 
         self.classifier = classifier
 
-        self.loss_fn = GCODLoss(8)
+        self.loss_fn = GCODLoss(16)
         # self.focal_loss = FocalLoss(alpha)
         self.acc_fn = Accuracy('multiclass', num_classes=6)
         self.undersample = torch.argmin(alpha).int().item()

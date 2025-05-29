@@ -19,7 +19,7 @@ class EdgeEncoder(MessagePassing):
     def forward(self, x, edge_index, edge_attr, batch):
         edge_emb = self.edge_mlp(edge_attr)
         out = self.propagate(edge_index, x=x, edge_attr=edge_emb)
-        out = self.norm(out + x, batch)
+        out = self.norm(out, batch) + x
         return out 
 
     def message(self, x_i, x_j, edge_attr):

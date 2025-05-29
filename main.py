@@ -12,6 +12,7 @@ import lightning as L
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from source.utils import collate_fn_with_augmentation
 
 
 def seed_everything(seed=42):
@@ -52,13 +53,17 @@ def main(train_path=None, test_path=None, epochs=None):
         # alpha = n / n.sum()
         # alpha = 1.0 - alpha
         # model.focal_loss = FocalLoss(alpha)
-        train_dl = DataLoader(train_ds, shuffle=False, batch_size=batch_size)
-
+        train_dl = DataLoader(
+            train_ds,
+            batch_size=16,
+            shuffle=True,
+            collate_fn=lambda x: collate_fn_with_augmentation(x, drop_edge_prob=0.2, edge_noise_std=0.05)
+        )
         split = train_path.split("/")[-2]
         model.split = split
 
 
-        trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1, accumulate_grad_batches=8)
+        trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1)
         trainer.fit(model, train_dataloaders=train_dl)
 
         history = model.h
