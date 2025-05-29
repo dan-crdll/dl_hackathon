@@ -41,7 +41,7 @@ def main(train_path=None, test_path=None, epochs=None):
 
     # encoder = Encoder(7, hidden_dim, num_layers)
     # classifier = Classifier(hidden_dim, hidden_dim, 6, dropout)
-    encoder = GNN(6, 2)
+    encoder = GNN(6, 5)
     alpha = torch.ones(6)
     model = LitClassifier(encoder, alpha, split=None)
 
@@ -59,7 +59,7 @@ def main(train_path=None, test_path=None, epochs=None):
             train_ds,
             batch_size=16,
             shuffle=True,
-            collate_fn=lambda x: collate_fn_with_augmentation(x, drop_edge_prob=0.2, edge_noise_std=0.05)
+            #collate_fn=lambda x: collate_fn_with_augmentation(x, drop_edge_prob=0.2, edge_noise_std=0.05)
         )
         split = train_path.split("/")[-2]
         model.split = split
