@@ -6,6 +6,7 @@ from source.layers import Classifier, Encoder
 from source.model import LitClassifier
 from source.load_data import GraphDataset
 from source.loss_fn import FocalLoss, GCODLoss
+from source.conv import GNN
 from torch_geometric.data import DataLoader
 from tqdm.auto import tqdm
 import lightning as L
@@ -38,10 +39,11 @@ def main(train_path=None, test_path=None, epochs=None):
 
     n = torch.zeros(6)
 
-    encoder = Encoder(7, hidden_dim, num_layers)
-    classifier = Classifier(hidden_dim, hidden_dim, 6, dropout)
+    # encoder = Encoder(7, hidden_dim, num_layers)
+    # classifier = Classifier(hidden_dim, hidden_dim, 6, dropout)
+    encoder = GNN(6)
     alpha = torch.ones(6)
-    model = LitClassifier(encoder, classifier, alpha, split=None)
+    model = LitClassifier(encoder, alpha, split=None)
 
     if train_path is not None:
         train_ds = GraphDataset(train_path)

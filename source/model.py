@@ -5,10 +5,10 @@ import torch
 
 
 class LitClassifier(L.LightningModule):
-    def __init__(self, encoder, classifier, alpha, split):
+    def __init__(self, encoder, alpha, split):
         super().__init__()
         self.encoder = encoder 
-        self.classifier = classifier
+        # self.classifier = classifier
 
         self.loss_fn = GCODLoss(16)
         # self.focal_loss = FocalLoss(alpha)
@@ -28,15 +28,16 @@ class LitClassifier(L.LightningModule):
         return torch.optim.AdamW(self.parameters(), lr=1e-4)
     
     def forward(self, data):
-        z = self.encoder(data)
-        y = self.classifier(z)
+        # z = self.encoder(data)
+        # y = self.classifier(z)
+        y = self.encoder(data)
         return y 
     
     def on_train_epoch_end(self):
-        if (self.current_epoch + 1) % 10 == 0:
+        if (self.current_epoch + 1) % 2 == 0:
             torch.save(self.state_dict(), f"./checkpoints/model_{self.split}_epoch_{self.current_epoch}.pth")
             print("Checkpoint Saved")
-        if (self.current_epoch + 1) % 10 == 0:
+        if (self.current_epoch + 1) % 2 == 0:
             loss = sum(self.loss) / len(self.loss)
             acc = sum(self.acc) / len(self.acc)
             self.h.append({
@@ -53,7 +54,7 @@ class LitClassifier(L.LightningModule):
 
         loss = self.loss_fn(pred, y)
         acc = self.acc_fn(pred, y)
-        if (self.current_epoch + 1) % 10 == 0:
+        if (self.current_epoch + 1) % 2 == 0:
             self.log_dict({
                 'loss': loss,
                 'accuracy': acc 
