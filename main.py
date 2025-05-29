@@ -46,19 +46,19 @@ def main(train_path=None, test_path=None, epochs=None):
         train_ds = GraphDataset(train_path)
         dataloader = DataLoader(train_ds, shuffle=False, batch_size=1)
 
-        for d in tqdm(dataloader):
-            n[d.y] = n[d.y] + 1
-        del dataloader 
-        alpha = n / n.sum()
-        alpha = 1.0 - alpha
-        model.focal_loss = FocalLoss(alpha)
+        # for d in tqdm(dataloader):
+        #     n[d.y] = n[d.y] + 1
+        # del dataloader 
+        # alpha = n / n.sum()
+        # alpha = 1.0 - alpha
+        # model.focal_loss = FocalLoss(alpha)
         train_dl = DataLoader(train_ds, shuffle=False, batch_size=batch_size)
 
         split = train_path.split("/")[-2]
         model.split = split
 
 
-        trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1)
+        trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1, accumulate_grad_batches=8)
         trainer.fit(model, train_dataloaders=train_dl)
 
         history = model.h

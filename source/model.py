@@ -11,7 +11,7 @@ class LitClassifier(L.LightningModule):
         self.classifier = classifier
 
         self.loss_fn = GCODLoss(8)
-        self.focal_loss = FocalLoss(alpha)
+        # self.focal_loss = FocalLoss(alpha)
         self.acc_fn = Accuracy('multiclass', num_classes=6)
         self.undersample = torch.argmin(alpha).int().item()
         self.h = []
@@ -51,7 +51,7 @@ class LitClassifier(L.LightningModule):
         
         pred = self.forward(batch)
 
-        loss = 0.4 * self.focal_loss(pred, y) + 0.6 * self.loss_fn(pred, y)
+        loss = self.loss_fn(pred, y)
         acc = self.acc_fn(pred, y)
         if (self.current_epoch + 1) % 10 == 0:
             self.log_dict({
