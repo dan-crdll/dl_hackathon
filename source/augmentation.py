@@ -72,8 +72,11 @@ class GraphAugmentation:
         if num_edges == 0:
             return data.clone()
         
-        # Create mask for edges to keep
-        mask = torch.rand(num_edges) > p
+        # Get device from edge_index
+        device = edge_index.device
+        
+        # Create mask for edges to keep (on same device)
+        mask = torch.rand(num_edges, device=device) > p
         
         # Ensure at least one edge remains if possible
         if not mask.any() and num_edges > 0:
@@ -114,12 +117,15 @@ class GraphAugmentation:
         if num_nodes == 0:
             return data.clone()
         
-        # Create mask for nodes to keep
-        keep_mask = torch.rand(num_nodes) > p
+        # Get device from edge_index
+        device = data.edge_index.device
+        
+        # Create mask for nodes to keep (on same device)
+        keep_mask = torch.rand(num_nodes, device=device) > p
         keep_nodes = torch.where(keep_mask)[0]
         
         if len(keep_nodes) == 0:  # Ensure at least one node remains
-            keep_nodes = torch.tensor([0])
+            keep_nodes = torch.tensor([0], device=device)
         
         # Extract subgraph
         edge_index, edge_attr = subgraph(
@@ -185,6 +191,9 @@ class GraphAugmentation:
         if num_nodes == 0 or edge_index.size(1) == 0:
             return data.clone()
         
+        # Get device from edge_index
+        device = edge_index.device
+        
         # Convert to adjacency list for efficient random walks
         adj_list = [[] for _ in range(num_nodes)]
         for i in range(edge_index.size(1)):
@@ -206,11 +215,11 @@ class GraphAugmentation:
                 visited_nodes.add(next_node)
                 current_node = next_node
         
-        # Convert to tensor
-        keep_nodes = torch.tensor(list(visited_nodes), dtype=torch.long)
+        # Convert to tensor (on same device)
+        keep_nodes = torch.tensor(list(visited_nodes), dtype=torch.long, device=device)
         
         if len(keep_nodes) == 0:
-            keep_nodes = torch.tensor([0])
+            keep_nodes = torch.tensor([0], device=device)
         
         # Extract subgraph
         edge_index, edge_attr = subgraph(
@@ -249,6 +258,9 @@ class GraphAugmentation:
         if num_nodes <= 1:
             return data.clone()
         
+        # Get device from edge_index
+        device = edge_index.device
+        
         # Calculate number of edges to add
         num_possible_edges = num_nodes * (num_nodes - 1)
         num_edges_to_add = int(add_prob * num_possible_edges)
@@ -275,7 +287,7 @@ class GraphAugmentation:
             attempts += 1
         
         if new_edges:
-            new_edge_tensor = torch.tensor(new_edges, dtype=torch.long).T
+            new_edge_tensor = torch.tensor(new_edges, dtype=torch.long, device=device).T
             combined_edge_index = torch.cat([edge_index, new_edge_tensor], dim=1)
         else:
             combined_edge_index = edge_index
@@ -289,7 +301,7 @@ class GraphAugmentation:
         # Handle edge attributes - pad with zeros for new edges
         if hasattr(data, 'edge_attr') and data.edge_attr is not None:
             if new_edges:
-                new_edge_attrs = torch.zeros(len(new_edges), data.edge_attr.size(1))
+                new_edge_attrs = torch.zeros(len(new_edges), data.edge_attr.size(1), device=device)
                 new_data.edge_attr = torch.cat([data.edge_attr, new_edge_attrs], dim=0)
             else:
                 new_data.edge_attr = data.edge_attr
@@ -472,3 +484,52 @@ def create_edge_augmentation_pipeline(data: Data, num_augmentations: int = 5) ->
     
     return augmented_graphs
 
+
+# Example usage
+if __name__ == "__main__":
+    # Create sample edge-only graph data
+    num_nodes = 100
+    edge_index = torch.randint(0, num_nodes, (2, 200))  # Random edges
+    edge_attr = torch.randn(200, 4)  # Optional edge attributes
+    
+    # Edge-only graph (no node features)
+    data = Data(edge_index=edge_index, edge_attr=edge_attr)
+    
+    # Initialize augmenter
+    augmenter = EdgeGraphAugmentation(
+        edge_drop_prob=0.2,
+        node_drop_prob=0.1,
+        edge_attr_noise_std=0.05
+    )
+    
+    # Infer number of nodes from edge_index
+    num_nodes_inferred = augmenter._get_num_nodes(data)
+    
+    # Apply different augmentations
+    print(f"Original graph: {num_nodes_inferred} nodes (inferred), {data.num_edges} edges")
+    
+    aug1 = augmenter.edge_dropout(data)
+    print(f"After edge dropout: {augmenter._get_num_nodes(aug1)} nodes, {aug1.num_edges} edges")
+    
+    aug2 = augmenter.node_dropout(data)
+    print(f"After node dropout: {augmenter._get_num_nodes(aug2)} nodes, {aug2.num_edges} edges")
+    
+    aug3 = augmenter.add_edge_noise(data)
+    print(f"After adding edge noise: {augmenter._get_num_nodes(aug3)} nodes, {aug3.num_edges} edges")
+    
+    aug4 = augmenter.random_walk_subgraph(data)
+    print(f"After random walk: {augmenter._get_num_nodes(aug4)} nodes, {aug4.num_edges} edges")
+    
+    aug5 = augmenter.add_self_loops_augmentation(data)
+    print(f"After adding self-loops: {augmenter._get_num_nodes(aug5)} nodes, {aug5.num_edges} edges")
+    
+    # Example without edge attributes
+    data_no_attr = Data(edge_index=edge_index)
+    aug6 = augmenter.edge_perturbation(data_no_attr)
+    print(f"After edge perturbation (no attr): {augmenter._get_num_nodes(aug6)} nodes, {aug6.num_edges} edges")
+    
+    # Create augmentation pipeline
+    augmented_graphs = create_edge_augmentation_pipeline(data, num_augmentations=3)
+    print(f"\nCreated {len(augmented_graphs)} augmented versions")
+    for i, aug_graph in enumerate(augmented_graphs):
+        print(f"Augmented graph {i+1}: {augmenter._get_num_nodes(aug_graph)} nodes, {aug_graph.num_edges} edges")
