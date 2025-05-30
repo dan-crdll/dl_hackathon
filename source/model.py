@@ -65,7 +65,7 @@ class LitClassifier(L.LightningModule):
         if epoch > 15:
             return 1.0
         else:
-            return 1 / epoch
+            return epoch / 15
     
     def training_step(self, batch):
         # batch = self.undersample_class2(batch)
