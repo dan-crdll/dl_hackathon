@@ -2,11 +2,11 @@ import torch
 import numpy as np  
 import random
 import argparse
-from source.layers import Classifier, Encoder
+from source.encoder import Encoder
 from source.model import LitClassifier
 from source.load_data import GraphDataset
-from source.loss_fn import FocalLoss, GCODLoss
-from source.conv import GNN
+from source.loss_fn import GCODLoss
+from source.similarity_module import RobustSimilarityModule
 from torch_geometric.data import DataLoader
 from tqdm.auto import tqdm
 import lightning as L
@@ -42,20 +42,13 @@ def main(train_path=None, test_path=None, epochs=None):
 
     # encoder = Encoder(7, hidden_dim, num_layers)
     # classifier = Classifier(hidden_dim, hidden_dim, 6, dropout)
-    encoder = GNN(6, 5)
-    alpha = torch.ones(6)
-    model = LitClassifier(encoder, alpha, split=None)
+    encoder = Encoder()
+    similarity_module = RobustSimilarityModule(256, 6, confidence_threshold=0.6)
+    model = LitClassifier(None, encoder, similarity_module)
 
     if train_path is not None:
         train_ds = GraphDataset(train_path)
-        dataloader = DataLoader(train_ds, shuffle=False, batch_size=1)
 
-        # for d in tqdm(dataloader):
-        #     n[d.y] = n[d.y] + 1
-        # del dataloader 
-        # alpha = n / n.sum()
-        # alpha = 1.0 - alpha
-        # model.focal_loss = FocalLoss(alpha)
         train_dl = DataLoader(
             train_ds,
             batch_size=8,

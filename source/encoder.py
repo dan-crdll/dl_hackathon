@@ -50,23 +50,7 @@ class Encoder(nn.Module):
             z = conv(z, edge_index, edge_attr, batch)
 
         z = global_mean_pool(z, batch)
-        return z
+        return z    # BSZ x HIDDEN_DIM
     
 
-class Classifier(nn.Module):
-    def __init__(self, in_dim, hidden_dim, num_classes, dropout):
-        super().__init__()
-
-        self.mlp = nn.Sequential(
-            nn.Linear(in_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, num_classes)
-        )
-    
-    def forward(self, z):
-        y = self.mlp(z)
-        return y 
     
