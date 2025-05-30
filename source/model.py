@@ -34,7 +34,7 @@ class LitClassifier(L.LightningModule):
         return y 
     
     def on_train_epoch_end(self):
-        if (self.current_epoch + 1) % 4 == 0:
+        if (self.current_epoch + 1)  % 10 == 0:
             loss = sum(self.loss) / len(self.loss)
             acc = sum(self.acc) / len(self.acc)
             self.h.append({
