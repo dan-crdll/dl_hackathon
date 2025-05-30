@@ -178,7 +178,7 @@ def main(train_path=None, test_path=None, epochs=None):
             if best_ckpt is not None:
                 print(f"Loading checkpoints {best_ckpt}")
                 model.load_state_dict(torch.load(f'./checkpoints/{best_ckpt}'))
-        model.eval()
+        model.eval().to('cuda')
         results = []
         with torch.no_grad():
             for data in tqdm(test_dl, total=len(test_dl)):
