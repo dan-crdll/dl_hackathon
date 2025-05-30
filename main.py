@@ -75,7 +75,7 @@ def main(train_path=None, test_path=None, epochs=None):
             dirpath="./checkpoints",
             filename="model_split_" + split + "_epoch_{epoch}",
             save_top_k=5,
-            monitor="accuracy",
+            monitor="val_accuracy",
             mode="max",
             save_weights_only=True
         )
@@ -182,7 +182,7 @@ def main(train_path=None, test_path=None, epochs=None):
         results = []
         with torch.no_grad():
             for data in tqdm(test_dl, total=len(test_dl)):
-                pred, *_ = model(data)
+                pred, *_ = model(data.to('cuda'))
                 label = torch.argmax(pred, -1).cpu().item()
                 results.append(label)
 
