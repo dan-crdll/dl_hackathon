@@ -54,7 +54,7 @@ def main(train_path=None, test_path=None, epochs=None):
 
         train_dl = DataLoader(
             train_ds,
-            batch_size=8,
+            batch_size=64,
             shuffle=True,
             drop_last=True
             #collate_fn=lambda x: collate_fn_with_augmentation(x, drop_edge_prob=0.2, edge_noise_std=0.05)
@@ -62,7 +62,7 @@ def main(train_path=None, test_path=None, epochs=None):
 
         val_dl = DataLoader(
             val_ds,
-            batch_size=8,
+            batch_size=64,
             shuffle=True,
             drop_last=True
         )
