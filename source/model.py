@@ -32,7 +32,11 @@ class LitClassifier(L.LightningModule):
         self.loss = []
         self.acc = []
 
+        self.val_loss = []
+        self.val_acc = []
+
         self.h = []
+        self.val_h = []
     
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=1e-4)
@@ -60,6 +64,9 @@ class LitClassifier(L.LightningModule):
                 'loss': loss,
                 'accuracy': acc
             })
+
+        self.loss.clear()
+        self.loss.clear()
     
     def weight_soft(self, epoch):
         if epoch > 15:
@@ -91,4 +98,33 @@ class LitClassifier(L.LightningModule):
 
         return loss 
 
+    def validation_step(self, batch):
+        # batch = self.undersample_class2(batch)
+        y = batch.y 
+        
+        pred, (_, contrastive_loss, _) = self.forward(batch, self.weight_soft(self.current_epoch))
+
+
+        loss = self.loss_fn_prev(pred, y) + contrastive_loss
+        acc = self.acc_fn(pred, y)
+
+        self.log_dict({
+            'val_loss': loss,
+            'val_accuracy': acc 
+        }, prog_bar=True, on_epoch=True, on_step=False, batch_size=pred.shape[0])
+
+        self.val_loss.append(loss.detach().cpu().item())
+        self.val_acc.append(acc.cpu().item())
+
+        return loss
     
+    def on_validation_epoch_end(self):
+        if (self.current_epoch + 1) % 10 == 0:
+            loss = sum(self.val_loss) / len(self.val_loss)
+            acc = sum(self.val_acc) / len(self.val_acc)
+            self.val_h.append({
+                'loss': loss,
+                'accuracy': acc
+            })
+        self.val_loss.clear()
+        self.val_acc.clear()

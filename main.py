@@ -15,6 +15,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from source.utils import collate_fn_with_augmentation
 from lightning.pytorch.callbacks import ModelCheckpoint
+from torch.utils.data import random_split
 
 
 def seed_everything(seed=42):
@@ -47,14 +48,25 @@ def main(train_path=None, test_path=None, epochs=None):
     model = LitClassifier(None, encoder, similarity_module)
 
     if train_path is not None:
-        train_ds = GraphDataset(train_path)
+        dataset = GraphDataset(train_path)
+
+        train_ds, val_ds = random_split(dataset, [0.75, 0.25])
 
         train_dl = DataLoader(
             train_ds,
             batch_size=8,
             shuffle=True,
+            drop_last=True
             #collate_fn=lambda x: collate_fn_with_augmentation(x, drop_edge_prob=0.2, edge_noise_std=0.05)
         )
+
+        val_dl = DataLoader(
+            val_ds,
+            batch_size=8,
+            shuffle=True,
+            drop_last=True
+        )
+
         global split
         split = train_path.split("/")[-2]
         model.split = split
@@ -70,7 +82,7 @@ def main(train_path=None, test_path=None, epochs=None):
 
 
         trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1, callbacks=[checkpoint_callback])
-        trainer.fit(model, train_dataloaders=train_dl)
+        trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
 
         history = model.h
         epochs = [i * 10 for i in range(len(history))]
@@ -82,7 +94,7 @@ def main(train_path=None, test_path=None, epochs=None):
             "loss": losses,
             "accuracy": accuracies
         })
-        csv_path = f"logs/metric_{split}.csv"
+        csv_path = f"logs/metric_{split}_train.csv"
         df.to_csv(csv_path, index=False)
 
         plt.figure(figsize=(10, 5))
@@ -101,8 +113,43 @@ def main(train_path=None, test_path=None, epochs=None):
         plt.grid(True)
 
         plt.tight_layout()
-        plt.savefig(f"logs/metric_{split}.png")
+        plt.savefig(f"logs/metric_{split}_train.png")
         plt.close()
+
+        # VALIDATION PLOT
+        history = model.val_h
+        epochs = [i * 10 for i in range(len(history))]
+        losses = [entry["loss"] for entry in history]
+        accuracies = [entry["accuracy"] for entry in history]
+
+        df = pd.DataFrame({
+            "epoch": epochs,
+            "loss": losses,
+            "accuracy": accuracies
+        })
+        csv_path = f"logs/metric_{split}_val.csv"
+        df.to_csv(csv_path, index=False)
+
+        plt.figure(figsize=(10, 5))
+        plt.subplot(1, 2, 1)
+        plt.plot(epochs, losses, label="Loss", color="tab:red")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Loss")
+        plt.grid(True)
+
+        plt.subplot(1, 2, 2)
+        plt.plot(epochs, accuracies, label="Accuracy", color="tab:blue")
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy")
+        plt.title("Accuracy")
+        plt.grid(True)
+
+        plt.tight_layout()
+        plt.savefig(f"logs/metric_{split}_val.png")
+        plt.close()
+
+
 
         del train_ds 
     
@@ -135,7 +182,7 @@ def main(train_path=None, test_path=None, epochs=None):
         results = []
         with torch.no_grad():
             for data in tqdm(test_dl, total=len(test_dl)):
-                pred = model(data)
+                pred, *_ = model(data)
                 label = torch.argmax(pred, -1).cpu().item()
                 results.append(label)
 
