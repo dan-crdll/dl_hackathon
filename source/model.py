@@ -18,7 +18,7 @@ class LitClassifier(L.LightningModule):
             nn.Linear(hidden_dim, num_classes)
         )
 
-        self.loss_fn_prev = GCODLoss(64)
+        self.loss_fn_prev = GCODLoss(8)
         self.infonce = InfoNCELoss(0.05)
 
         self.augmenter = GraphAugmentation(0.2, 0.2)
