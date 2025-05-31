@@ -54,14 +54,16 @@ def main(train_path=None, test_path=None, epochs=None):
 
         train_dl = DataLoader(
             train_ds,
-            batch_size=8,
+            batch_size=32,
             shuffle=True,
+            drop_last=True
         )
 
         val_dl = DataLoader(
             val_ds,
-            batch_size=8,
+            batch_size=32,
             shuffle=False,
+            drop_last=True
         )
 
         global split
@@ -73,15 +75,16 @@ def main(train_path=None, test_path=None, epochs=None):
             dirpath="./checkpoints",
             filename="model_split_" + split + "_epoch_{epoch}",
             save_top_k=5,
-            monitor="val_loss",
-            mode="min",
+            monitor="val_accuracy",
+            mode="max",
             save_weights_only=True
         )
 
         early_stop_callback = EarlyStopping(
-            monitor='val_loss',
+            monitor='val_accuracy',
             min_delta=1e-3,
-            mode='min'
+            mode='max',
+            patience=5
         )
 
 
