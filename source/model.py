@@ -15,8 +15,9 @@ class LitClassifier(L.LightningModule):
         self.acc_fn = Accuracy('multiclass', num_classes=6)
         self.undersample = torch.argmin(alpha).int().item()
         self.h = []
-        self.loss_epoch = []
-        self.acc_epoch = []
+        self.val_h = []
+        self.val_loss = []
+        self.val_acc = []
         self.split = split
 
         self.loss = []
@@ -42,6 +43,8 @@ class LitClassifier(L.LightningModule):
                 'accuracy': acc
             })
 
+        self.loss.clear()
+        self.acc.clear()
     
     def training_step(self, batch):
         # batch = self.undersample_class2(batch)
@@ -57,10 +60,39 @@ class LitClassifier(L.LightningModule):
             'accuracy': acc 
         }, prog_bar=True, on_epoch=True, on_step=False, batch_size=pred.shape[0])
 
-        self.loss_epoch.append(loss.detach().cpu().item())
-        self.acc_epoch.append(acc.cpu().item())
 
         self.loss.append(loss.detach().cpu().item())
         self.acc.append(acc.cpu().item())
+
+        return loss 
+
+    def on_validation_epoch_end(self):
+        if (self.current_epoch + 1)  % 10 == 0:
+            loss = sum(self.val_loss) / len(self.val_loss)
+            acc = sum(self.val_acc) / len(self.val_acc)
+            self.val_h.append({
+                'loss': loss,
+                'accuracy': acc
+            })
+        self.val_loss.clear()
+        self.val_acc.clear()
+
+    
+    def validation_step(self, batch):
+        # batch = self.undersample_class2(batch)
+        y = batch.y 
+        
+        pred = self.forward(batch)
+
+        loss = self.loss_fn(pred, y)
+        acc = self.acc_fn(pred, y)
+
+        self.log_dict({
+            'val_loss': loss,
+            'val_accuracy': acc 
+        }, prog_bar=True, on_epoch=True, on_step=False, batch_size=pred.shape[0])
+
+        self.val_loss.append(loss.detach().cpu().item())
+        self.val_acc.append(acc.cpu().item())
 
         return loss 

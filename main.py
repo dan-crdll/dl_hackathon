@@ -14,7 +14,8 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from source.utils import collate_fn_with_augmentation
-from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+from torch.utils.data import random_split
 
 
 def seed_everything(seed=42):
@@ -47,22 +48,24 @@ def main(train_path=None, test_path=None, epochs=None):
     model = LitClassifier(encoder, alpha, split=None)
 
     if train_path is not None:
-        train_ds = GraphDataset(train_path)
-        dataloader = DataLoader(train_ds, shuffle=False, batch_size=1)
+        dataset = GraphDataset(train_path)
 
-        # for d in tqdm(dataloader):
-        #     n[d.y] = n[d.y] + 1
-        # del dataloader 
-        # alpha = n / n.sum()
-        # alpha = 1.0 - alpha
-        # model.focal_loss = FocalLoss(alpha)
+        train_ds, val_ds = random_split(dataset, [0.75, 0.25])
+
         train_dl = DataLoader(
             train_ds,
             batch_size=8,
             shuffle=True,
-            #collate_fn=lambda x: collate_fn_with_augmentation(x, drop_edge_prob=0.2, edge_noise_std=0.05)
         )
+
+        val_dl = DataLoader(
+            val_ds,
+            batch_size=8,
+            shuffle=False,
+        )
+
         global split
+
         split = train_path.split("/")[-2]
         model.split = split
 
@@ -70,14 +73,20 @@ def main(train_path=None, test_path=None, epochs=None):
             dirpath="./checkpoints",
             filename="model_split_" + split + "_epoch_{epoch}",
             save_top_k=5,
-            monitor="accuracy",
-            mode="max",
+            monitor="val_loss",
+            mode="min",
             save_weights_only=True
         )
 
+        early_stop_callback = EarlyStopping(
+            monitor='val_loss',
+            min_delta=1e-3,
+            mode='min'
+        )
 
-        trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1, callbacks=[checkpoint_callback])
-        trainer.fit(model, train_dataloaders=train_dl)
+
+        trainer = L.Trainer(max_epochs=epochs, gradient_clip_val=1, callbacks=[checkpoint_callback, early_stop_callback])
+        trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
 
         history = model.h
         epochs = [i * 10 for i in range(len(history))]
@@ -111,6 +120,38 @@ def main(train_path=None, test_path=None, epochs=None):
         plt.savefig(f"logs/metric_{split}.png")
         plt.close()
 
+        history = model.val_h
+        epochs = [i * 10 for i in range(len(history))]
+        losses = [entry["loss"] for entry in history]
+        accuracies = [entry["accuracy"] for entry in history]
+
+        df = pd.DataFrame({
+            "epoch": epochs,
+            "loss": losses,
+            "accuracy": accuracies
+        })
+        csv_path = f"logs/metric_{split}_val.csv"
+        df.to_csv(csv_path, index=False)
+
+        plt.figure(figsize=(10, 5))
+        plt.subplot(1, 2, 1)
+        plt.plot(epochs, losses, label="Loss", color="tab:red")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Loss")
+        plt.grid(True)
+
+        plt.subplot(1, 2, 2)
+        plt.plot(epochs, accuracies, label="Accuracy", color="tab:blue")
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy")
+        plt.title("Accuracy")
+        plt.grid(True)
+
+        plt.tight_layout()
+        plt.savefig(f"logs/metric_{split}_val.png")
+        plt.close()
+
         del train_ds 
     
     if test_path is not None:
@@ -119,25 +160,26 @@ def main(train_path=None, test_path=None, epochs=None):
 
         split = test_path.split("/")[-2]
         model.split = split 
-        if train_path is None:
-            checkpoints = os.listdir('./checkpoints')
+        
+        checkpoints = os.listdir('./checkpoints')
 
-            max_epoch = -1
-            best_ckpt = None
-            for f in checkpoints:
-                parts = f.split("_")
-                if len(parts) < 3 or parts[-3] != split:
-                    continue
-                try:
-                    epoch_num = int(parts[-1].split(".")[0])
-                except Exception:
-                    continue
-                if epoch_num > max_epoch:
-                    max_epoch = epoch_num
-                    best_ckpt = f
-            if best_ckpt is not None:
-                print(f"Loading checkpoints {best_ckpt}")
-                model.load_state_dict(torch.load(f'./checkpoints/{best_ckpt}'))
+        max_epoch = -1
+        best_ckpt = None
+        for f in checkpoints:
+            parts = f.split("_")
+            if len(parts) < 3 or parts[-3] != split:
+                continue
+            try:
+                epoch_num = int(parts[-1].split(".")[0])
+            except Exception:
+                continue
+            if epoch_num > max_epoch:
+                max_epoch = epoch_num
+                best_ckpt = f
+        if best_ckpt is not None:
+            print(f"Loading checkpoints {best_ckpt}")
+            model.load_state_dict(torch.load(f'./checkpoints/{best_ckpt}'))
+
         model.eval()
         results = []
         with torch.no_grad():
